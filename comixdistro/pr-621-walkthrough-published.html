@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ComixDistro — Walkthrough: PR #621</title>
+<style>
+  :root {
+    --bg: #ffffff;
+    --surface: #f6f8fa;
+    --surface-2: #eaeef2;
+    --border: #d0d7de;
+    --text: #1f2328;
+    --muted: #656d76;
+    --accent: #0969da;
+    --accent-soft: #ddf4ff;
+    --good: #1a7f37;
+    --warn: #9a6700;
+    --bad: #cf222e;
+    --code-bg: #f6f8fa;
+    --radius: 10px;
+    --maxw: 1080px;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0d1117;
+      --surface: #161b22;
+      --surface-2: #21262d;
+      --border: #30363d;
+      --text: #e6edf3;
+      --muted: #9198a1;
+      --accent: #4493f8;
+      --accent-soft: #121d2f;
+      --good: #3fb950;
+      --warn: #d29922;
+      --bad: #f85149;
+      --code-bg: #161b22;
+    }
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    line-height: 1.6;
+    font-size: 16px;
+  }
+  .wrap {
+    display: grid;
+    grid-template-columns: 240px minmax(0, 1fr);
+    gap: 40px;
+    max-width: var(--maxw);
+    margin: 0 auto;
+    padding: 32px 24px 96px;
+  }
+  /* ---- Table of contents ---- */
+  nav.toc {
+    position: sticky;
+    top: 24px;
+    align-self: start;
+    font-size: 14px;
+    max-height: calc(100vh - 48px);
+    overflow-y: auto;
+  }
+  nav.toc h2 {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--muted);
+    margin: 0 0 12px;
+  }
+  nav.toc ol { list-style: none; margin: 0; padding: 0; }
+  nav.toc li { margin: 0 0 8px; }
+  nav.toc a {
+    color: var(--text);
+    text-decoration: none;
+    display: block;
+    padding: 4px 10px;
+    border-left: 2px solid transparent;
+    border-radius: 0 6px 6px 0;
+  }
+  nav.toc a:hover { background: var(--surface); border-left-color: var(--accent); color: var(--accent); }
+  /* ---- Main column ---- */
+  main { min-width: 0; }
+  header.doc {
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 24px;
+    margin-bottom: 8px;
+  }
+  .eyebrow {
+    color: var(--accent);
+    font-weight: 600;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin: 0 0 6px;
+  }
+  header.doc h1 { font-size: 30px; line-height: 1.2; margin: 0 0 16px; }
+  dl.meta {
+    display: grid;
+    grid-template-columns: max-content 1fr;
+    gap: 6px 16px;
+    margin: 0;
+    font-size: 14px;
+  }
+  dl.meta dt { color: var(--muted); font-weight: 600; }
+  dl.meta dd { margin: 0; }
+  /* ---- Sections ---- */
+  details.section {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    margin: 16px 0;
+    background: var(--bg);
+    overflow: hidden;
+  }
+  details.section > summary {
+    cursor: pointer;
+    padding: 16px 20px;
+    font-size: 19px;
+    font-weight: 600;
+    background: var(--surface);
+    list-style: none;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  details.section > summary::-webkit-details-marker { display: none; }
+  details.section > summary::before {
+    content: "›";
+    display: inline-block;
+    transition: transform 0.15s ease;
+    color: var(--muted);
+    font-size: 22px;
+    line-height: 1;
+  }
+  details.section[open] > summary::before { transform: rotate(90deg); }
+  .section-body { padding: 4px 20px 20px; }
+  h3 { font-size: 17px; margin: 24px 0 8px; }
+  h4 { font-size: 15px; margin: 18px 0 6px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
+  p { margin: 10px 0; }
+  a { color: var(--accent); }
+  code {
+    font-family: var(--mono);
+    font-size: 0.88em;
+    background: var(--surface-2);
+    padding: 0.15em 0.4em;
+    border-radius: 5px;
+  }
+  pre {
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    overflow-x: auto;
+    font-size: 13px;
+    line-height: 1.5;
+  }
+  pre code { background: none; padding: 0; font-size: inherit; }
+  table { border-collapse: collapse; width: 100%; margin: 14px 0; font-size: 14px; }
+  th, td { border: 1px solid var(--border); padding: 8px 12px; text-align: left; vertical-align: top; }
+  th { background: var(--surface); font-weight: 600; }
+  /* ---- Callouts ---- */
+  .callout {
+    border-left: 4px solid var(--accent);
+    background: var(--accent-soft);
+    border-radius: 0 var(--radius) var(--radius) 0;
+    padding: 12px 16px;
+    margin: 16px 0;
+  }
+  .callout.warn { border-left-color: var(--warn); background: color-mix(in srgb, var(--warn) 12%, var(--bg)); }
+  .callout.flag { border-left-color: var(--bad); background: color-mix(in srgb, var(--bad) 12%, var(--bg)); }
+  .callout .label { font-weight: 700; font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; display: block; margin-bottom: 4px; }
+  /* ---- Story / step cards ---- */
+  .story {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    margin: 16px 0;
+    overflow: hidden;
+  }
+  .story > .story-head {
+    background: var(--surface);
+    padding: 12px 16px;
+    font-weight: 600;
+    border-bottom: 1px solid var(--border);
+  }
+  .story .role-pill {
+    display: inline-block;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--accent);
+    background: var(--accent-soft);
+    border-radius: 999px;
+    padding: 2px 10px;
+    margin-left: 8px;
+  }
+  .story ol { margin: 12px 0; padding-left: 28px; }
+  .story ol li { margin: 6px 0; }
+  .story .expect { color: var(--good); font-weight: 500; }
+  .story-body { padding: 4px 16px 14px; }
+  /* ---- Diagram figure ---- */
+  figure.diagram { margin: 18px 0; text-align: center; }
+  figure.diagram svg { max-width: 100%; height: auto; }
+  figure.diagram figcaption { color: var(--muted); font-size: 13px; margin-top: 8px; }
+  /* ---- Tags ---- */
+  .tag { font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 999px; text-transform: uppercase; letter-spacing: 0.04em; }
+  .tag.good { color: var(--good); background: color-mix(in srgb, var(--good) 15%, var(--bg)); }
+  .tag.warn { color: var(--warn); background: color-mix(in srgb, var(--warn) 15%, var(--bg)); }
+  .tag.bad { color: var(--bad); background: color-mix(in srgb, var(--bad) 15%, var(--bg)); }
+  /* ---- Click-to-copy ---- */
+  .copy {
+    cursor: pointer;
+    border: 1px solid var(--border);
+    background: var(--surface-2);
+    color: inherit;
+    font-family: var(--mono);
+    font-size: 0.85em;
+    padding: 0.1em 0.5em;
+    border-radius: 6px;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4em;
+    user-select: none;
+    vertical-align: baseline;
+    transition: background 0.12s ease, border-color 0.12s ease, color 0.12s ease;
+  }
+  .copy:hover { background: var(--accent-soft); border-color: var(--accent); }
+  .copy::after { content: "\29C9"; opacity: 0.55; font-size: 0.9em; }
+  .copy.copied { color: var(--good); border-color: var(--good); }
+  .copy.copied::after { content: "\2713"; opacity: 1; }
+  /* ---- Button (primary CTA; works on <button> or <a>) ---- */
+  .btn {
+    display: inline-block;
+    cursor: pointer;
+    font-family: var(--sans);
+    font-size: 14px;
+    font-weight: 600;
+    color: #ffffff;
+    background: var(--accent);
+    border: 1px solid var(--accent);
+    border-radius: 8px;
+    padding: 8px 16px;
+    text-decoration: none;
+  }
+  .btn:hover { filter: brightness(1.08); }
+  /* ---- Checklist ---- */
+  ul.checklist { list-style: none; margin: 12px 0; padding: 0; }
+  ul.checklist li { margin: 8px 0; }
+  ul.checklist label { display: flex; gap: 8px; align-items: flex-start; cursor: pointer; }
+  ul.checklist input { margin-top: 5px; flex: none; }
+  footer.doc { margin-top: 40px; padding-top: 16px; border-top: 1px solid var(--border); color: var(--muted); font-size: 13px; }
+  /* ---- Responsive ---- */
+  @media (max-width: 800px) {
+    .wrap { grid-template-columns: 1fr; gap: 16px; padding: 20px 16px 64px; }
+    nav.toc { position: static; max-height: none; border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 16px; background: var(--surface); }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <nav class="toc">
+    <h2>Contents</h2>
+    <ol>
+      <li><a href="#setup">Setup</a></li>
+      <li><a href="#walkthrough">Walkthrough</a></li>
+      <li><a href="#not-browser-testable">Not browser-testable</a></li>
+      <li><a href="#cleanup">Cleanup</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="doc">
+      <p class="eyebrow">ComixDistro · PR Walkthrough</p>
+      <h1>PR #621: home empty-state wording</h1>
+      <dl class="meta">
+        <dt>Project</dt><dd>ComixDistro</dd>
+        <dt>PR</dt><dd><a href="https://github.com/euroteamoutreach/comix_distro/pull/621">#621</a></dd>
+        <dt>Branch</dt><dd><code>fix/gh-576-plan-event-empty-state-copy</code></dd>
+        <dt>Commit</dt><dd><code>ff5413f</code></dd>
+        <dt>Date</dt><dd>2026-06-01</dd>
+        <dt>Estimate</dt><dd>~3 minutes</dd>
+      </dl>
+    </header>
+
+    <div class="callout">
+      <span class="label">Verifying on production?</span>
+      Use the production app (<a href="https://app.dobroizlo.com.ua/">app.dobroizlo.com.ua</a>) and your own account in place of the local server and seed logins below. The steps and expected results are identical.
+    </div>
+
+    <p>This PR is copy-only: it changes one i18n string (<code>pages.home.empty_state</code>) in <strong>both</strong> locales so the prompt no longer says &ldquo;your <strong>first</strong> event&rdquo; for distributors who already have event history. The whole change is browser-visible — there&rsquo;s no hidden logic.</p>
+
+    <details class="section" id="setup" open>
+      <summary>Setup</summary>
+      <div class="section-body">
+        <ol>
+          <li>Start the app: <button type="button" class="copy" data-copy="bin/dev">bin/dev</button> → <button type="button" class="copy" data-copy="http://localhost:3000">http://localhost:3000</button></li>
+          <li>Ensure dev data is loaded (the repro account is a seeded volume distributor with one completed event): <button type="button" class="copy" data-copy="bin/rails db:seed">bin/rails db:seed</button>. If your DB is stale, <button type="button" class="copy" data-copy="bin/rails db:seed:replant">bin/rails db:seed:replant</button> gives a clean state (destructive — dev only).</li>
+          <li><strong>Locale matters here</strong> — the default locale is <code>uk</code> and <em>both</em> the Ukrainian and English strings changed, so check both. Toggle locale with the switcher in the top nav.</li>
+        </ol>
+
+        <h3>Logins</h3>
+        <p>Magic-link via <code>letter_opener</code> in dev — no passwords.</p>
+        <table>
+          <thead><tr><th>Role</th><th>Account</th><th>Why this account</th></tr></thead>
+          <tbody>
+            <tr>
+              <td>Returning distributor <span class="role-pill">the fix</span></td>
+              <td><button type="button" class="copy" data-copy="vol-contact-1@example.com">vol-contact-1@example.com</button></td>
+              <td>Has <strong>one completed event and no active event</strong> — the exact state that triggered the bug (empty state shown, but not their first event).</td>
+            </tr>
+            <tr>
+              <td>Brand-new distributor</td>
+              <td><button type="button" class="copy" data-copy="petro@example.com">petro@example.com</button> (Poltava)</td>
+              <td>Has <strong>no events at all</strong> — confirms the neutral copy still reads correctly for a genuine first-timer.</td>
+            </tr>
+          </tbody>
+        </table>
+        <p>To log in locally: go to <button type="button" class="copy" data-copy="http://localhost:3000/users/sign_in">http://localhost:3000/users/sign_in</button>, enter the email, submit. <code>letter_opener</code> pops the magic-link email in a browser tab — click the link in it to land on the Home page signed in. (On production, use your own account.)</p>
+      </div>
+    </details>
+
+    <details class="section" id="walkthrough" open>
+      <summary>Walkthrough</summary>
+      <div class="section-body">
+
+        <div class="story">
+          <div class="story-head">
+            Part 1 — Returning distributor sees neutral wording
+            <span class="role-pill">the fix</span>
+          </div>
+          <div class="story-body">
+            <ol>
+              <li>Sign in as <button type="button" class="copy" data-copy="vol-contact-1@example.com">vol-contact-1@example.com</button>.</li>
+              <li>You land on the Home page. The locale will be Ukrainian (this account&rsquo;s preference).<br>
+                  <span class="expect">✅ In the empty-state card (below the distributor-number line), the prompt reads &ldquo;Готові поширювати книги? Почніть з планування події.&rdquo; — <strong>no</strong> &ldquo;першої&rdquo; (first). A &ldquo;Запланувати подію&rdquo; button sits below it.</span><br>
+                  ❌ Regression if it still says &ldquo;…планування <strong>першої</strong> події.&rdquo;</li>
+              <li>Switch the locale to <strong>English</strong> via the nav switcher.<br>
+                  <span class="expect">✅ The same card now reads &ldquo;Ready to distribute some books? Start by planning an event.&rdquo; — <strong>no</strong> &ldquo;your first event&rdquo;. The button reads &ldquo;Plan an event&rdquo;.</span><br>
+                  ❌ Regression if it still says &ldquo;…planning your <strong>first</strong> event.&rdquo;</li>
+              <li>(Optional) Narrow the browser to ~375px wide.<br>
+                  <span class="expect">✅ The card and prompt remain readable and unbroken (mobile-first guardrail).</span></li>
+            </ol>
+            <div class="callout">
+              This is the precise case from QA #576: a distributor who has already completed an event but has no active one. The old copy wrongly called it their &ldquo;first&rdquo; event.
+            </div>
+          </div>
+        </div>
+
+        <div class="story">
+          <div class="story-head">
+            Part 2 — Brand-new distributor still reads correctly
+            <span class="role-pill">regression check — for context</span>
+          </div>
+          <div class="story-body">
+            <ol>
+              <li>Sign out, then sign in as <button type="button" class="copy" data-copy="petro@example.com">petro@example.com</button> (Poltava — no events).</li>
+              <li>View the Home page in both locales (toggle via the nav switcher).<br>
+                  <span class="expect">✅ EN: &ldquo;Ready to distribute some books? Start by planning an event.&rdquo;</span><br>
+                  <span class="expect">✅ UK: &ldquo;Готові поширювати книги? Почніть з планування події.&rdquo;</span></li>
+            </ol>
+            <p>The neutral wording is correct here too — a first-timer is never told anything inaccurate, and we avoided adding first-time-vs-returning conditional copy.</p>
+          </div>
+        </div>
+
+      </div>
+    </details>
+
+    <details class="section" id="not-browser-testable">
+      <summary>Not browser-testable</summary>
+      <div class="section-body">
+        <p>Nothing — the change is a pure copy edit fully visible in the rendered page. No automated test asserted on the old string, so none needed updating.</p>
+      </div>
+    </details>
+
+    <details class="section" id="cleanup">
+      <summary>Cleanup</summary>
+      <div class="section-body">
+        <p>Nothing to restore. The local scratch copy of this walkthrough is gitignored — delete it when done.</p>
+      </div>
+    </details>
+
+    <footer class="doc">
+      Generated by the <code>/walkthrough</code> skill · 2026-06-01
+    </footer>
+  </main>
+</div>
+<script>
+  // Click-to-copy. Any [data-copy] element copies its data-copy value
+  // (falling back to its text). Modern Clipboard API with a legacy
+  // execCommand fallback so it works on file:// and older browsers.
+  (function () {
+    function flash(el) {
+      el.classList.add("copied");
+      clearTimeout(el._copyTimer);
+      el._copyTimer = setTimeout(function () { el.classList.remove("copied"); }, 1200);
+    }
+    function legacyCopy(text, el) {
+      var ta = document.createElement("textarea");
+      ta.value = text;
+      ta.setAttribute("readonly", "");
+      ta.style.position = "absolute";
+      ta.style.left = "-9999px";
+      document.body.appendChild(ta);
+      ta.select();
+      try { document.execCommand("copy"); flash(el); } catch (e) {}
+      document.body.removeChild(ta);
+    }
+    document.addEventListener("click", function (e) {
+      var el = e.target.closest("[data-copy]");
+      if (!el) return;
+      var text = el.getAttribute("data-copy") || el.textContent.trim();
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(function () { flash(el); },
+          function () { legacyCopy(text, el); });
+      } else {
+        legacyCopy(text, el);
+      }
+    });
+  })();
+</script>
+</body>
+</html>
