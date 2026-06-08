@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ComixDistro — Walkthrough: PR #647</title>
+<style>
+  :root {
+    --bg:#f1f5f9; --surface:#ffffff; --surface-2:#f8fafc; --border:#e2e8f0;
+    --strong:#1e293b; --text:#334155; --muted:#64748b;
+    --accent:#1992d4; --accent-bright:#2bb0ed; --accent-deep:#0f2847;
+    --accent-code:#024775; --accent-soft:#e0f2fe; --heading:#0f2847;
+    --hero-from:#024775; --hero-to:#0f2847;
+    --good:#15803d; --warn:#b45309; --bad:#b91c1c;
+    --cal-info-rule:#1992d4; --cal-info-fill:#dbeafe;
+    --cal-warn-rule:#f59e0b; --cal-warn-fill:#fef3c7;
+    --cal-bad-rule:#dc2626;  --cal-bad-fill:#fee2e2;
+    --cal-good-fill:#dcfce7;
+    --pre-bg:#0f2847; --pre-text:#e2e8f0;
+    --tok-c:#64748b; --tok-k:#7dd3fc; --tok-s:#fcd34d;
+    --radius: 12px; --radius-sm: 8px;
+    --shadow: 0 1px 3px rgba(15,40,71,0.06);
+    --shadow-hero: 0 2px 14px rgba(15,40,71,0.25);
+    --maxw: 1160px;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg:#0b1622; --surface:#111f30; --surface-2:#16273b; --border:#243b53;
+      --strong:#e6eef7; --text:#b7c5d6; --muted:#7e93ab;
+      --accent:#38bdf8; --accent-bright:#5cc6f5; --accent-deep:#0e2a4a;
+      --accent-code:#7dd3fc; --accent-soft:#0c2a44; --heading:#cfe0f2;
+      --hero-from:#024775; --hero-to:#07223f;
+      --good:#4ade80; --warn:#fbbf24; --bad:#f87171;
+      --cal-info-rule:#38bdf8; --cal-info-fill:#0e2438;
+      --cal-warn-rule:#fbbf24; --cal-warn-fill:#2c2310;
+      --cal-bad-rule:#f87171;  --cal-bad-fill:#371718;
+      --cal-good-fill:#0e2a1a;
+      --pre-bg:#081522; --pre-text:#d6e2f0;
+      --tok-c:#6b7d91; --tok-k:#7dd3fc; --tok-s:#fcd34d;
+    }
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font-family: var(--sans); line-height: 1.6; font-size: 16px;
+  }
+  strong, b { color: var(--strong); }
+  /* ---- Full-bleed hero (placed BEFORE .wrap in the template) ---- */
+  header.hero {
+    background: linear-gradient(135deg, var(--hero-from) 0%, var(--hero-to) 100%);
+    color: #fff; padding: 44px 0 38px; margin-bottom: 36px; box-shadow: var(--shadow-hero);
+  }
+  header.hero .hero-inner { max-width: var(--maxw); margin: 0 auto; padding: 0 24px; }
+  header.hero h1 { font-size: 34px; line-height: 1.15; font-weight: 800; letter-spacing: -.01em; margin: 0 0 14px; color: #fff; }
+  header.hero .eyebrow { color: var(--accent-bright); }
+  header.hero .sub { color: #cfe6f6; font-size: 16px; margin: -4px 0 16px; }
+  header.hero dl.meta dt { color: #9fc6e6; }
+  header.hero dl.meta dd { color: #eaf6ff; }
+  header.hero dl.meta a { color: #eaf6ff; text-decoration: underline; }
+  header.hero code { background: rgba(255,255,255,0.12); border-color: transparent; color: #eaf6ff; }
+  .eyebrow { color: var(--accent); font-weight: 700; font-size: 12px; text-transform: uppercase; letter-spacing: .12em; margin: 0 0 8px; }
+  .wrap { display: grid; grid-template-columns: 260px minmax(0, 1fr); gap: 46px; max-width: var(--maxw); margin: 0 auto; padding: 8px 24px 96px; }
+  /* ---- Table of contents ---- */
+  nav.toc { position: sticky; top: 24px; align-self: start; font-size: 14px; max-height: calc(100vh - 48px); overflow-y: auto; }
+  nav.toc h2 { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 0 0 12px; }
+  nav.toc ol { list-style: none; margin: 0; padding: 0; }
+  nav.toc li { margin: 0 0 8px; }
+  nav.toc a { color: var(--muted); text-decoration: none; display: block; padding: 5px 11px; border-left: 2px solid transparent; border-radius: 0 6px 6px 0; }
+  nav.toc a:hover { background: var(--surface); border-left-color: var(--accent); color: var(--accent); }
+  nav.toc .crumb { font-size: 11.5px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--accent); margin: 0 0 4px; padding: 0; border-left: 0; }
+  nav.toc .ttl { font-size: 17px; font-weight: 700; line-height: 1.25; margin: 0 0 16px; color: var(--strong); }
+  nav.toc a .n { color: var(--muted); font-variant-numeric: tabular-nums; margin-right: 6px; }
+  .srcbox { font-size: 12.5px; color: var(--muted); background: var(--surface-2); border: 1px solid var(--border); border-radius: 9px; padding: 11px 13px; margin-top: 16px; }
+  .srcbox b { color: var(--strong); }
+  .srcbox code { font-family: var(--mono); font-size: 12px; }
+  /* ---- Main column ---- */
+  main { min-width: 0; }
+  dl.meta { display: grid; grid-template-columns: max-content 1fr; gap: 8px 18px; margin: 0; font-size: 14px; }
+  dl.meta dt { color: var(--muted); font-weight: 600; }
+  dl.meta dd { margin: 0; }
+  .sub { color: var(--muted); }
+  /* ---- Metric strip (render at top of main, under the hero) ---- */
+  .metrics { display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; margin: 0 0 26px; }
+  .metric { border: 1px solid var(--border); border-radius: var(--radius); padding: 13px 15px; background: var(--surface); box-shadow: var(--shadow); }
+  .metric .v { font-size: 24px; font-weight: 700; line-height: 1; color: var(--heading); }
+  .metric .k { font-size: 12px; color: var(--muted); margin-top: 6px; line-height: 1.3; }
+  /* ---- Sections: OPEN underlined headers (collapsible, no box) ---- */
+  details.section { margin: 30px 0; }
+  details.section > summary {
+    cursor: pointer; list-style: none; font-size: 20px; font-weight: 700; color: var(--heading);
+    padding: 0 0 8px; border-bottom: 2px solid var(--border);
+    display: flex; align-items: center; gap: 12px; letter-spacing: -.01em;
+  }
+  details.section > summary::-webkit-details-marker { display: none; }
+  details.section > summary::before {
+    content: "›"; display: inline-block; transition: transform .15s ease;
+    color: var(--accent-bright); font-size: 19px; line-height: 1; font-weight: 700;
+  }
+  details.section[open] > summary::before { transform: rotate(90deg); }
+  details.section > summary .badge { margin-left: auto; font-family: var(--mono); font-size: 11.5px; font-weight: 600; color: var(--muted); background: var(--surface-2); border: 1px solid var(--border); border-radius: 999px; padding: 2px 10px; }
+  .section-body { padding: 16px 0 0; }
+  h3 { font-size: 17px; margin: 24px 0 9px; letter-spacing: -.01em; color: var(--strong); }
+  h4 { font-size: 13px; margin: 20px 0 6px; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
+  p { margin: 14px 0; }
+  a { color: var(--accent); }
+  code { font-family: var(--mono); font-size: 13px; background: var(--bg); border: 1px solid var(--border); padding: 1px 6px; border-radius: 5px; color: var(--accent-code); }
+  /* ---- Code blocks: navy in BOTH modes (echoes the hero), syntax tokens ---- */
+  pre { background: var(--pre-bg); color: var(--pre-text); border-radius: var(--radius); padding: 16px 18px; overflow-x: auto; font-size: 13.5px; line-height: 1.6; box-shadow: var(--shadow); }
+  pre code { background: none; border: 0; padding: 0; font-size: inherit; color: inherit; }
+  pre .c { color: var(--tok-c); }   /* comment / delimiter */
+  pre .k { color: var(--tok-k); }   /* keyword */
+  pre .s { color: var(--tok-s); }   /* string */
+  /* ---- Tables: white card, navy thead, zebra rows ---- */
+  table { border-collapse: separate; border-spacing: 0; width: 100%; margin: 18px 0; font-size: 14.5px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow); }
+  thead th { background: var(--accent-deep); color: #fff; text-align: left; padding: 12px 14px; font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; }
+  tbody td { text-align: left; padding: 13px 14px; border-top: 1px solid var(--border); vertical-align: top; }
+  tbody tr:nth-child(even) { background: var(--surface-2); }
+  /* ---- Callouts (info default; warn; flag) ---- */
+  .callout { border-left: 4px solid var(--cal-info-rule); background: var(--cal-info-fill); border-radius: 0 var(--radius-sm) var(--radius-sm) 0; padding: 14px 18px; margin: 20px 0; }
+  .callout.warn { border-left-color: var(--cal-warn-rule); background: var(--cal-warn-fill); }
+  .callout.flag { border-left-color: var(--cal-bad-rule); background: var(--cal-bad-fill); }
+  .callout .label { font-weight: 700; font-size: 12px; text-transform: uppercase; letter-spacing: .05em; display: block; margin-bottom: 5px; color: var(--strong); }
+  /* ---- Rundown: icon-led points on a card with hairline dividers ---- */
+  .rundown { border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow); padding: 2px 22px; margin: 20px 0; }
+  .rundown .item { display: flex; gap: 14px; padding: 15px 0; border-bottom: 1px solid var(--border); }
+  .rundown .item:last-child { border-bottom: none; }
+  .rundown .ico { flex: none; width: 24px; text-align: center; font-size: 17px; line-height: 1.55; }
+  .rundown .item:not(:has(.ico)) .body { position: relative; padding-left: 20px; }
+  .rundown .item:not(:has(.ico)) .body::before { content: ""; position: absolute; left: 0; top: 9px; width: 8px; height: 8px; border-radius: 50%; background: var(--accent-bright); }
+  .rundown .item .body { color: var(--text); }
+  /* ---- Story / step cards ---- */
+  .story { border: 1px solid var(--border); border-radius: var(--radius); margin: 20px 0; overflow: hidden; background: var(--surface); box-shadow: var(--shadow); }
+  .story > .story-head { background: var(--surface-2); padding: 12px 18px; font-weight: 600; font-size: 16px; color: var(--strong); border-bottom: 1px solid var(--border); }
+  .story .role-pill { display: inline-block; font-size: 12.5px; font-weight: 600; color: var(--accent); background: var(--accent-soft); border-radius: 999px; padding: 2px 11px; margin-left: 8px; }
+  .story ol { margin: 12px 0; padding-left: 28px; }
+  .story ol li { margin: 8px 0; }
+  .story .expect { color: var(--good); font-weight: 500; }
+  .story-body { padding: 4px 18px 16px; }
+  /* ---- Diagram figure ---- */
+  figure.diagram { margin: 22px 0; text-align: center; }
+  figure.diagram svg { max-width: 100%; height: auto; }
+  figure.diagram figcaption { color: var(--muted); font-size: 13px; margin-top: 9px; }
+  /* ---- Tags ---- */
+  .tag { font-size: 11.5px; font-weight: 600; padding: 2px 9px; border-radius: 999px; text-transform: uppercase; letter-spacing: .04em; }
+  .tag.good { color: var(--good); background: var(--cal-good-fill); }
+  .tag.warn { color: var(--warn); background: var(--cal-warn-fill); }
+  .tag.bad { color: var(--bad); background: var(--cal-bad-fill); }
+  /* ---- Click-to-copy ---- */
+  .copy { cursor: pointer; border: 1px solid var(--border); background: var(--surface-2); color: inherit; font-family: var(--mono); font-size: 0.95em; line-height: 1; padding: 0.2em 0.65em; border-radius: 6px; display: inline-flex; align-items: center; gap: 0.45em; user-select: none; vertical-align: baseline; transition: background .12s ease, border-color .12s ease, color .12s ease; }
+  .copy:hover { background: var(--accent-soft); border-color: var(--accent); }
+  .copy::after { content: "⧉"; opacity: 0.7; font-size: 1.05em; }
+  .copy.copied { color: var(--good); border-color: var(--good); }
+  .copy.copied::after { content: "✓"; opacity: 1; }
+  /* ---- Button (primary CTA; works on <button> or <a>) ---- */
+  .btn { display: inline-block; cursor: pointer; font-family: var(--sans); font-size: 15px; font-weight: 600; color: #fff; background: var(--accent); border: 1px solid var(--accent); border-radius: var(--radius-sm); padding: 9px 17px; text-decoration: none; }
+  .btn:hover { filter: brightness(1.08); }
+  /* ---- Checklist ---- */
+  ul.checklist { list-style: none; margin: 14px 0; padding: 0; }
+  ul.checklist li { margin: 10px 0; }
+  ul.checklist label { display: flex; gap: 9px; align-items: flex-start; cursor: pointer; }
+  ul.checklist input { margin-top: 5px; flex: none; accent-color: var(--accent); }
+  footer.doc { margin-top: 46px; padding-top: 18px; border-top: 1px solid var(--border); color: var(--muted); font-size: 13.5px; }
+  /* ---- RFC keyword chip (MUST / SHOULD / MAY) ---- */
+  .kw { font-family: var(--mono); font-size: 11.5px; font-weight: 700; letter-spacing: .04em; padding: 1px 8px; border-radius: 5px; background: var(--cal-warn-fill); color: var(--warn); border: 1px solid var(--cal-warn-rule); }
+  /* ---- Data-model field markers (used inside tables) ---- */
+  .pill { font-family: var(--mono); font-size: 11.5px; padding: 1px 8px; border-radius: 999px; border: 1px solid var(--border); color: var(--muted); white-space: nowrap; }
+  .req { color: var(--bad); font-size: 11.5px; font-weight: 700; }
+  .opt { color: var(--muted); font-size: 11.5px; }
+  /* ---- Responsive ---- */
+  @media (max-width: 820px) {
+    header.hero { padding: 32px 0 28px; margin-bottom: 24px; }
+    header.hero .hero-inner { padding: 0 16px; }
+    header.hero h1 { font-size: 27px; }
+    .wrap { grid-template-columns: 1fr; gap: 18px; padding: 4px 16px 64px; }
+    nav.toc { position: static; max-height: none; border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 18px; background: var(--surface); }
+    .metrics { grid-template-columns: repeat(3, 1fr); }
+  }
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="hero-inner">
+    <p class="eyebrow">ComixDistro · PR Walkthrough</p>
+    <h1>PR #647: New distributors &amp; team members in the activity feed</h1>
+    <dl class="meta">
+      <dt>Project</dt><dd>ComixDistro</dd>
+      <dt>PR</dt><dd><a href="https://github.com/euroteamoutreach/comix_distro/pull/647">#647</a></dd>
+      <dt>Branch</dt><dd>feat/gh-642-feed-new-members</dd>
+      <dt>Commit</dt><dd>2d6dcb0</dd>
+      <dt>Date</dt><dd>2026-06-08</dd>
+      <dt>Estimate</dt><dd>~12 minutes</dd>
+    </dl>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <nav class="toc">
+    <h2>Contents</h2>
+    <ol>
+      <li><a href="#setup">Setup</a></li>
+      <li><a href="#walkthrough">Walkthrough</a></li>
+      <li><a href="#not-browser-testable">Not browser-testable</a></li>
+      <li><a href="#cleanup">Cleanup</a></li>
+    </ol>
+  </nav>
+
+  <main>
+
+    <div class="callout">
+      <span class="label">Verifying on production?</span>
+      Use the production app and your own account in place of the local server
+      and seed logins below. The steps and expected results are identical.
+      Note: Parts 1–2 create a <em>real</em> new distributor and team member —
+      coordinate with the team before running them against production data.
+    </div>
+
+    <details class="section" id="setup" open>
+      <summary>Setup</summary>
+      <div class="section-body">
+        <ol>
+          <li>Start the app: <button type="button" class="copy" data-copy="bin/dev">bin/dev</button> → open <button type="button" class="copy" data-copy="http://localhost:3000">http://localhost:3000</button></li>
+          <li>If you haven't seeded recently: <button type="button" class="copy" data-copy="bin/rails db:seed">bin/rails db:seed</button>. This feature is <strong>forward-only</strong> — a fresh seed has <em>no</em> "joined" entries yet; you create them in Parts 1–2.</li>
+          <li><strong>Locale:</strong> default is <code>uk</code> (Ukrainian). Sign in as <code>admin@example.com</code> for the English UI or <code>admin2@example.com</code> for Ukrainian — both are admins, used for the bilingual check in Part 3.</li>
+          <li><strong>Mobile-first:</strong> spot-check the dashboard feed and the activity filter tabs at a 375px viewport.</li>
+        </ol>
+
+        <h3>Logins</h3>
+        <table>
+          <thead><tr><th>Role</th><th>Credentials</th><th>Notes</th></tr></thead>
+          <tbody>
+            <tr>
+              <td>Admin (en) <span class="role-pill">admin</span></td>
+              <td><button type="button" class="copy" data-copy="admin@example.com">admin@example.com</button></td>
+              <td>Views the dashboard feed; English UI</td>
+            </tr>
+            <tr>
+              <td>Admin (uk) <span class="role-pill">admin</span></td>
+              <td><button type="button" class="copy" data-copy="admin2@example.com">admin2@example.com</button></td>
+              <td>Same, Ukrainian UI — for the bilingual check</td>
+            </tr>
+            <tr>
+              <td>Primary contact</td>
+              <td><button type="button" class="copy" data-copy="taras@example.com">taras@example.com</button></td>
+              <td>Owner of <em>Київська книжкова місія</em>; invites a teammate in Part 2</td>
+            </tr>
+          </tbody>
+        </table>
+        <p><strong>How to log in (magic link via letter_opener):</strong> enter the email on the sign-in page and submit; the magic-link email opens automatically in a new browser tab — click the link in it to finish signing in. New signups (Part 1) use a fresh email you pick, e.g. <button type="button" class="copy" data-copy="qa-distro@example.com">qa-distro@example.com</button> — it does not need to pre-exist.</p>
+      </div>
+    </details>
+
+    <details class="section" id="walkthrough" open>
+      <summary>Walkthrough</summary>
+      <div class="section-body">
+
+        <div class="story">
+          <div class="story-head">
+            Part 1 — New distributor joined (self-registration)
+            <span class="role-pill">new in this PR</span>
+          </div>
+          <div class="story-body">
+            <ol>
+              <li>In a private/incognito window, open <button type="button" class="copy" data-copy="http://localhost:3000/signup">http://localhost:3000/signup</button>.<br>
+                  <span class="expect">✅ Sign-up form with first name, last name, and email.</span></li>
+              <li>Enter First <code>QA</code>, Last <code>Distro</code>, Email <button type="button" class="copy" data-copy="qa-distro@example.com">qa-distro@example.com</button>, then submit.<br>
+                  <span class="expect">✅ A "check your email" notice; you land on the sign-in page.</span></li>
+              <li>Switch to the letter_opener email tab and click the magic sign-in link.<br>
+                  <span class="expect">✅ Signed in and dropped into onboarding at the Profile step.</span></li>
+              <li>Enter a phone (e.g. <code>+380991234500</code>) → Continue.<br>
+                  <span class="expect">✅ Organization step.</span></li>
+              <li>Fill the distributor with sample values — Name <code>QA Test Outreach</code>, City <code>Київ</code>, plus any valid option for the city-type / region dropdowns, Address <code>вул. Тестова, 1</code>, Postal code <code>01001</code>, Organization type <code>Church</code>, Delivery <code>Nova Poshta</code> → Continue.<br>
+                  <span class="expect">✅ First agreement step.</span></li>
+              <li>Accept and Continue through all three agreement steps, then submit the final Acknowledgment.<br>
+                  <span class="expect">✅ Redirected to the home page with a success message. <em>This is the moment the "distributor joined" entry is recorded.</em></span></li>
+              <li>Back in your main window, sign in as <button type="button" class="copy" data-copy="admin@example.com">admin@example.com</button> and open <button type="button" class="copy" data-copy="http://localhost:3000/admin/dashboard">http://localhost:3000/admin/dashboard</button>.<br>
+                  <span class="expect">✅ Under <em>Recent activity</em>, the newest entry reads <strong>"New distributor QA Test Outreach joined"</strong>, shown with a multi-person (users) icon in a <strong>purple</strong> circle. The distributor name is a link.</span></li>
+              <li>Click the <em>QA Test Outreach</em> link.<br>
+                  <span class="expect">✅ Navigates to the admin distributor page for QA Test Outreach.</span></li>
+            </ol>
+          </div>
+        </div>
+
+        <div class="story">
+          <div class="story-head">
+            Part 2 — New team member joined (invite acceptance)
+            <span class="role-pill">new in this PR</span>
+          </div>
+          <div class="story-body">
+            <ol>
+              <li>In your main window, sign in as the primary contact <button type="button" class="copy" data-copy="taras@example.com">taras@example.com</button> (magic link).<br>
+                  <span class="expect">✅ Signed in as a distributor user for <em>Київська книжкова місія</em>.</span></li>
+              <li>Open <button type="button" class="copy" data-copy="http://localhost:3000/team">http://localhost:3000/team</button> and use the invite form to invite <button type="button" class="copy" data-copy="qa-teammate@example.com">qa-teammate@example.com</button>; submit.<br>
+                  <span class="expect">✅ The invite shows as pending, and an invitation email opens in the letter_opener tab.</span></li>
+              <li>In a private/incognito window, click the <em>Accept invitation</em> link from that email.<br>
+                  <span class="expect">✅ Invite acceptance / sign-up screen, email pre-filled, showing <em>Київська книжкова місія</em>.</span></li>
+              <li>Enter First <code>QA</code>, Last <code>Teammate</code> and submit → click the magic link in the email tab → complete the shortened onboarding (Profile → three agreements → Acknowledgment; <em>no</em> organization step). Finish.<br>
+                  <span class="expect">✅ Redirected home with a success message. <em>This is the moment the "team member joined" entry is recorded.</em></span></li>
+              <li>Back as admin (<button type="button" class="copy" data-copy="admin@example.com">admin@example.com</button>) open <button type="button" class="copy" data-copy="http://localhost:3000/admin/dashboard">http://localhost:3000/admin/dashboard</button>.<br>
+                  <span class="expect">✅ The newest <em>Recent activity</em> entry reads <strong>"New team member QA Teammate joined Київська книжкова місія"</strong>, with a single-person (user_circle) icon in a <strong>teal</strong> circle. Both the member name and the distributor name are links.</span></li>
+              <li>Click each link.<br>
+                  <span class="expect">✅ The member name opens the admin user page; the distributor name opens the admin distributor page.</span></li>
+            </ol>
+          </div>
+        </div>
+
+        <div class="story">
+          <div class="story-head">
+            Part 3 — Activity feed: new filter tabs &amp; bilingual labels
+            <span class="role-pill">new in this PR</span>
+          </div>
+          <div class="story-body">
+            <ol>
+              <li>As <code>admin@example.com</code>, on the dashboard click <em>View all activity</em> (below Recent activity), or open <button type="button" class="copy" data-copy="http://localhost:3000/admin/activity">http://localhost:3000/admin/activity</button>.<br>
+                  <span class="expect">✅ The full activity list. The tab bar now shows, after <em>Book requests</em>, two new tabs: <strong>Distributors</strong> and <strong>Team members</strong>.</span></li>
+              <li>Click <em>Distributors</em>.<br>
+                  <span class="expect">✅ The list filters to distributor-joined entries only (includes QA Test Outreach). URL gains <code>?type=distributor</code> and the tab is highlighted.</span></li>
+              <li>Click <em>Team members</em>.<br>
+                  <span class="expect">✅ Filters to team-member-joined entries only (includes QA Teammate). URL gains <code>?type=user</code>.</span></li>
+              <li>Bilingual check: sign in as <button type="button" class="copy" data-copy="admin2@example.com">admin2@example.com</button> (uk) and open <button type="button" class="copy" data-copy="http://localhost:3000/admin/activity">http://localhost:3000/admin/activity</button>.<br>
+                  <span class="expect">✅ The new tabs read <strong>Дистриб'ютори</strong> and <strong>Учасники команди</strong>. Feed text reads <em>"Новий дистриб'ютор QA Test Outreach приєднався"</em> and <em>"Новий учасник команди QA Teammate приєднався до Київська книжкова місія"</em>.</span></li>
+              <li>Responsive: narrow the window to ~375px on the activity page.<br>
+                  <span class="expect">✅ The tab bar scrolls horizontally; feed entries stay readable.</span></li>
+            </ol>
+          </div>
+        </div>
+
+      </div>
+    </details>
+
+    <details class="section" id="not-browser-testable">
+      <summary>Not browser-testable</summary>
+      <div class="section-body">
+        <ul>
+          <li><strong>"Exactly one entry, no duplicate"</strong> — that a self-registration records a single distributor entry and <em>no</em> separate entry for its primary-contact user is enforced in the model/controller and covered by integration tests. In the browser you only see the single resulting entry, not the absence of the duplicate.</li>
+          <li><strong>Primary-contact skip</strong> — that a primary-contact user is skipped (represented by the distributor entry) is a model guard verified by unit tests.</li>
+          <li><strong>Forward-only / no backfill</strong> — pre-existing seed distributors and users get no "joined" entry; there's nothing to click, they simply don't appear in the feed.</li>
+        </ul>
+      </div>
+    </details>
+
+    <details class="section" id="cleanup">
+      <summary>Cleanup</summary>
+      <div class="section-body">
+        <ul>
+          <li>The throwaway records — distributor <em>QA Test Outreach</em>, teammate <em>QA Teammate</em>, their users, and the activity entries — remain in your local DB. Reset with <button type="button" class="copy" data-copy="bin/rails db:reset">bin/rails db:reset</button> for a clean re-seed.</li>
+          <li>On <strong>production</strong>, Parts 1–2 create real records — coordinate before running them and clean up afterward.</li>
+          <li>This HTML lives under gitignored <code>tmp/</code> scratch — delete it when you're done.</li>
+        </ul>
+      </div>
+    </details>
+
+    <footer class="doc">
+      Generated by the <code>/walkthrough</code> skill · 2026-06-08
+    </footer>
+  </main>
+</div>
+<script>
+  // Click-to-copy. Any [data-copy] element copies its data-copy value
+  // (falling back to its text). Modern Clipboard API with a legacy
+  // execCommand fallback so it works on file:// and older browsers.
+  (function () {
+    function flash(el) {
+      el.classList.add("copied");
+      clearTimeout(el._copyTimer);
+      el._copyTimer = setTimeout(function () { el.classList.remove("copied"); }, 1200);
+    }
+    function legacyCopy(text, el) {
+      var ta = document.createElement("textarea");
+      ta.value = text;
+      ta.setAttribute("readonly", "");
+      ta.style.position = "absolute";
+      ta.style.left = "-9999px";
+      document.body.appendChild(ta);
+      ta.select();
+      try { document.execCommand("copy"); flash(el); } catch (e) {}
+      document.body.removeChild(ta);
+    }
+    document.addEventListener("click", function (e) {
+      var el = e.target.closest("[data-copy]");
+      if (!el) return;
+      var text = el.getAttribute("data-copy") || el.textContent.trim();
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(function () { flash(el); },
+          function () { legacyCopy(text, el); });
+      } else {
+        legacyCopy(text, el);
+      }
+    });
+  })();
+</script>
+</body>
+</html>
