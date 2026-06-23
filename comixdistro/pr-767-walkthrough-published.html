@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ComixDistro — Walkthrough: PR #767</title>
+<style>
+  :root {
+    --bg:#f1f5f9; --surface:#ffffff; --surface-2:#f8fafc; --border:#e2e8f0;
+    --strong:#1e293b; --text:#334155; --muted:#64748b;
+    --accent:#1992d4; --accent-bright:#2bb0ed; --accent-deep:#0f2847;
+    --accent-code:#024775; --accent-soft:#e0f2fe; --heading:#0f2847;
+    --hero-from:#024775; --hero-to:#0f2847;
+    --good:#15803d; --warn:#b45309; --bad:#b91c1c;
+    --cal-info-rule:#1992d4; --cal-info-fill:#dbeafe;
+    --cal-warn-rule:#f59e0b; --cal-warn-fill:#fef3c7;
+    --cal-bad-rule:#dc2626;  --cal-bad-fill:#fee2e2;
+    --cal-good-fill:#dcfce7;
+    --pre-bg:#0f2847; --pre-text:#e2e8f0;
+    --tok-c:#64748b; --tok-k:#7dd3fc; --tok-s:#fcd34d;
+    --radius: 12px; --radius-sm: 8px;
+    --shadow: 0 1px 3px rgba(15,40,71,0.06);
+    --shadow-hero: 0 2px 14px rgba(15,40,71,0.25);
+    --maxw: 1160px;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg:#0b1622; --surface:#111f30; --surface-2:#16273b; --border:#243b53;
+      --strong:#e6eef7; --text:#b7c5d6; --muted:#7e93ab;
+      --accent:#38bdf8; --accent-bright:#5cc6f5; --accent-deep:#0e2a4a;
+      --accent-code:#7dd3fc; --accent-soft:#0c2a44; --heading:#cfe0f2;
+      --hero-from:#024775; --hero-to:#07223f;
+      --good:#4ade80; --warn:#fbbf24; --bad:#f87171;
+      --cal-info-rule:#38bdf8; --cal-info-fill:#0e2438;
+      --cal-warn-rule:#fbbf24; --cal-warn-fill:#2c2310;
+      --cal-bad-rule:#f87171;  --cal-bad-fill:#371718;
+      --cal-good-fill:#0e2a1a;
+      --pre-bg:#081522; --pre-text:#d6e2f0;
+      --tok-c:#6b7d91; --tok-k:#7dd3fc; --tok-s:#fcd34d;
+    }
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font-family: var(--sans); line-height: 1.6; font-size: 16px;
+  }
+  strong, b { color: var(--strong); }
+  /* ---- Full-bleed hero (placed BEFORE .wrap in the template) ---- */
+  header.hero {
+    background: linear-gradient(135deg, var(--hero-from) 0%, var(--hero-to) 100%);
+    color: #fff; padding: 44px 0 38px; margin-bottom: 36px; box-shadow: var(--shadow-hero);
+  }
+  header.hero .hero-inner { max-width: var(--maxw); margin: 0 auto; padding: 0 24px; }
+  header.hero h1 { font-size: 34px; line-height: 1.15; font-weight: 800; letter-spacing: -.01em; margin: 0 0 14px; color: #fff; }
+  header.hero .eyebrow { color: var(--accent-bright); }
+  header.hero .sub { color: #cfe6f6; font-size: 16px; margin: -4px 0 16px; }
+  header.hero dl.meta dt { color: #9fc6e6; }
+  header.hero dl.meta dd { color: #eaf6ff; }
+  header.hero dl.meta a { color: #eaf6ff; text-decoration: underline; }
+  header.hero code { background: rgba(255,255,255,0.12); border-color: transparent; color: #eaf6ff; }
+  .eyebrow { color: var(--accent); font-weight: 700; font-size: 12px; text-transform: uppercase; letter-spacing: .12em; margin: 0 0 8px; }
+  .wrap { display: grid; grid-template-columns: 260px minmax(0, 1fr); gap: 46px; max-width: var(--maxw); margin: 0 auto; padding: 8px 24px 96px; }
+  /* ---- Table of contents ---- */
+  nav.toc { position: sticky; top: 24px; align-self: start; font-size: 14px; max-height: calc(100vh - 48px); overflow-y: auto; }
+  nav.toc h2 { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 0 0 12px; }
+  nav.toc ol { list-style: none; margin: 0; padding: 0; }
+  nav.toc li { margin: 0 0 8px; }
+  nav.toc a { color: var(--muted); text-decoration: none; display: block; padding: 5px 11px; border-left: 2px solid transparent; border-radius: 0 6px 6px 0; }
+  nav.toc a:hover { background: var(--surface); border-left-color: var(--accent); color: var(--accent); }
+  nav.toc .crumb { font-size: 11.5px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--accent); margin: 0 0 4px; padding: 0; border-left: 0; }
+  nav.toc .ttl { font-size: 17px; font-weight: 700; line-height: 1.25; margin: 0 0 16px; color: var(--strong); }
+  nav.toc a .n { color: var(--muted); font-variant-numeric: tabular-nums; margin-right: 6px; }
+  .srcbox { font-size: 12.5px; color: var(--muted); background: var(--surface-2); border: 1px solid var(--border); border-radius: 9px; padding: 11px 13px; margin-top: 16px; }
+  .srcbox b { color: var(--strong); }
+  .srcbox code { font-family: var(--mono); font-size: 12px; }
+  /* ---- Main column ---- */
+  main { min-width: 0; }
+  dl.meta { display: grid; grid-template-columns: max-content 1fr; gap: 8px 18px; margin: 0; font-size: 14px; }
+  dl.meta dt { color: var(--muted); font-weight: 600; }
+  dl.meta dd { margin: 0; }
+  .sub { color: var(--muted); }
+  /* ---- Metric strip (render at top of main, under the hero) ---- */
+  .metrics { display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; margin: 0 0 26px; }
+  .metric { border: 1px solid var(--border); border-radius: var(--radius); padding: 13px 15px; background: var(--surface); box-shadow: var(--shadow); }
+  .metric .v { font-size: 24px; font-weight: 700; line-height: 1; color: var(--heading); }
+  .metric .k { font-size: 12px; color: var(--muted); margin-top: 6px; line-height: 1.3; }
+  /* ---- Sections: OPEN underlined headers (collapsible, no box) ---- */
+  details.section { margin: 30px 0; }
+  details.section > summary {
+    cursor: pointer; list-style: none; font-size: 20px; font-weight: 700; color: var(--heading);
+    padding: 0 0 8px; border-bottom: 2px solid var(--border);
+    display: flex; align-items: center; gap: 12px; letter-spacing: -.01em;
+  }
+  details.section > summary::-webkit-details-marker { display: none; }
+  details.section > summary::before {
+    content: "›"; display: inline-block; transition: transform .15s ease;
+    color: var(--accent-bright); font-size: 19px; line-height: 1; font-weight: 700;
+  }
+  details.section[open] > summary::before { transform: rotate(90deg); }
+  details.section > summary .badge { margin-left: auto; font-family: var(--mono); font-size: 11.5px; font-weight: 600; color: var(--muted); background: var(--surface-2); border: 1px solid var(--border); border-radius: 999px; padding: 2px 10px; }
+  .section-body { padding: 16px 0 0; }
+  h3 { font-size: 17px; margin: 24px 0 9px; letter-spacing: -.01em; color: var(--strong); }
+  h4 { font-size: 13px; margin: 20px 0 6px; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
+  p { margin: 14px 0; }
+  a { color: var(--accent); }
+  code { font-family: var(--mono); font-size: 13px; background: var(--bg); border: 1px solid var(--border); padding: 1px 6px; border-radius: 5px; color: var(--accent-code); }
+  /* ---- Code blocks: navy in BOTH modes (echoes the hero), syntax tokens ---- */
+  pre { background: var(--pre-bg); color: var(--pre-text); border-radius: var(--radius); padding: 16px 18px; overflow-x: auto; font-size: 13.5px; line-height: 1.6; box-shadow: var(--shadow); }
+  pre code { background: none; border: 0; padding: 0; font-size: inherit; color: inherit; }
+  pre .c { color: var(--tok-c); }   /* comment / delimiter */
+  pre .k { color: var(--tok-k); }   /* keyword */
+  pre .s { color: var(--tok-s); }   /* string */
+  /* ---- Tables: white card, navy thead, zebra rows ---- */
+  table { border-collapse: separate; border-spacing: 0; width: 100%; margin: 18px 0; font-size: 14.5px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow); }
+  thead th { background: var(--accent-deep); color: #fff; text-align: left; padding: 12px 14px; font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; }
+  tbody td { text-align: left; padding: 13px 14px; border-top: 1px solid var(--border); vertical-align: top; }
+  tbody tr:nth-child(even) { background: var(--surface-2); }
+  /* ---- Callouts (info default; warn; flag) ---- */
+  .callout { border-left: 4px solid var(--cal-info-rule); background: var(--cal-info-fill); border-radius: 0 var(--radius-sm) var(--radius-sm) 0; padding: 14px 18px; margin: 20px 0; }
+  .callout.warn { border-left-color: var(--cal-warn-rule); background: var(--cal-warn-fill); }
+  .callout.flag { border-left-color: var(--cal-bad-rule); background: var(--cal-bad-fill); }
+  .callout .label { font-weight: 700; font-size: 12px; text-transform: uppercase; letter-spacing: .05em; display: block; margin-bottom: 5px; color: var(--strong); }
+  /* ---- Rundown: icon-led points on a card with hairline dividers ---- */
+  .rundown { border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow); padding: 2px 22px; margin: 20px 0; }
+  .rundown .item { display: flex; gap: 14px; padding: 15px 0; border-bottom: 1px solid var(--border); }
+  .rundown .item:last-child { border-bottom: none; }
+  .rundown .ico { flex: none; width: 24px; text-align: center; font-size: 17px; line-height: 1.55; }
+  .rundown .item:not(:has(.ico)) .body { position: relative; padding-left: 20px; }
+  .rundown .item:not(:has(.ico)) .body::before { content: ""; position: absolute; left: 0; top: 9px; width: 8px; height: 8px; border-radius: 50%; background: var(--accent-bright); }
+  .rundown .item .body { color: var(--text); }
+  /* ---- Story / step cards ---- */
+  .story { border: 1px solid var(--border); border-radius: var(--radius); margin: 20px 0; overflow: hidden; background: var(--surface); box-shadow: var(--shadow); }
+  .story > .story-head { background: var(--surface-2); padding: 12px 18px; font-weight: 600; font-size: 16px; color: var(--strong); border-bottom: 1px solid var(--border); }
+  .story .role-pill { display: inline-block; font-size: 12.5px; font-weight: 600; color: var(--accent); background: var(--accent-soft); border-radius: 999px; padding: 2px 11px; margin-left: 8px; }
+  .story ol { margin: 12px 0; padding-left: 28px; }
+  .story ol li { margin: 8px 0; }
+  .story .expect { color: var(--good); font-weight: 500; }
+  .story-body { padding: 4px 18px 16px; }
+  /* ---- Diagram figure ---- */
+  figure.diagram { margin: 22px 0; text-align: center; }
+  figure.diagram svg { max-width: 100%; height: auto; }
+  figure.diagram figcaption { color: var(--muted); font-size: 13px; margin-top: 9px; }
+  /* ---- Tags ---- */
+  .tag { font-size: 11.5px; font-weight: 600; padding: 2px 9px; border-radius: 999px; text-transform: uppercase; letter-spacing: .04em; }
+  .tag.good { color: var(--good); background: var(--cal-good-fill); }
+  .tag.warn { color: var(--warn); background: var(--cal-warn-fill); }
+  .tag.bad { color: var(--bad); background: var(--cal-bad-fill); }
+  /* ---- Click-to-copy ---- */
+  .copy { cursor: pointer; border: 1px solid var(--border); background: var(--surface-2); color: inherit; font-family: var(--mono); font-size: 0.95em; line-height: 1; padding: 0.2em 0.65em; border-radius: 6px; display: inline-flex; align-items: center; gap: 0.45em; user-select: none; vertical-align: baseline; transition: background .12s ease, border-color .12s ease, color .12s ease; }
+  .copy:hover { background: var(--accent-soft); border-color: var(--accent); }
+  .copy::after { content: "⧉"; opacity: 0.7; font-size: 1.05em; }
+  .copy.copied { color: var(--good); border-color: var(--good); }
+  .copy.copied::after { content: "✓"; opacity: 1; }
+  /* ---- Button (primary CTA; works on <button> or <a>) ---- */
+  .btn { display: inline-block; cursor: pointer; font-family: var(--sans); font-size: 15px; font-weight: 600; color: #fff; background: var(--accent); border: 1px solid var(--accent); border-radius: var(--radius-sm); padding: 9px 17px; text-decoration: none; }
+  .btn:hover { filter: brightness(1.08); }
+  /* ---- Checklist ---- */
+  ul.checklist { list-style: none; margin: 14px 0; padding: 0; }
+  ul.checklist li { margin: 10px 0; }
+  ul.checklist label { display: flex; gap: 9px; align-items: flex-start; cursor: pointer; }
+  ul.checklist input { margin-top: 5px; flex: none; accent-color: var(--accent); }
+  footer.doc { margin-top: 46px; padding-top: 18px; border-top: 1px solid var(--border); color: var(--muted); font-size: 13.5px; }
+  /* ---- RFC keyword chip (MUST / SHOULD / MAY) ---- */
+  .kw { font-family: var(--mono); font-size: 11.5px; font-weight: 700; letter-spacing: .04em; padding: 1px 8px; border-radius: 5px; background: var(--cal-warn-fill); color: var(--warn); border: 1px solid var(--cal-warn-rule); }
+  /* ---- Data-model field markers (used inside tables) ---- */
+  .pill { font-family: var(--mono); font-size: 11.5px; padding: 1px 8px; border-radius: 999px; border: 1px solid var(--border); color: var(--muted); white-space: nowrap; }
+  .req { color: var(--bad); font-size: 11.5px; font-weight: 700; }
+  .opt { color: var(--muted); font-size: 11.5px; }
+  /* ---- Responsive ---- */
+  @media (max-width: 820px) {
+    header.hero { padding: 32px 0 28px; margin-bottom: 24px; }
+    header.hero .hero-inner { padding: 0 16px; }
+    header.hero h1 { font-size: 27px; }
+    .wrap { grid-template-columns: 1fr; gap: 18px; padding: 4px 16px 64px; }
+    nav.toc { position: static; max-height: none; border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 18px; background: var(--surface); }
+    .metrics { grid-template-columns: repeat(3, 1fr); }
+  }
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="hero-inner">
+    <p class="eyebrow">ComixDistro · PR Walkthrough</p>
+    <h1>PR #767: Onboarding survives JavaScript failure</h1>
+    <dl class="meta">
+      <dt>Project</dt><dd>ComixDistro</dd>
+      <dt>PR</dt><dd><a href="https://github.com/euroteamoutreach/comix_distro/pull/767">#767</a></dd>
+      <dt>Branch</dt><dd>fix/gh-763-onboarding-progressive-enhancement</dd>
+      <dt>Commit</dt><dd>0ca2414</dd>
+      <dt>Date</dt><dd>2026-06-24</dd>
+      <dt>Estimate</dt><dd>~12 minutes</dd>
+    </dl>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <nav class="toc">
+    <h2>Contents</h2>
+    <ol>
+      <li><a href="#setup">Setup</a></li>
+      <li><a href="#walkthrough">Walkthrough</a></li>
+      <li><a href="#not-browser-testable">Not browser-testable</a></li>
+      <li><a href="#cleanup">Cleanup</a></li>
+    </ol>
+  </nav>
+
+  <main>
+<div class="callout">
+  <span class="label">&#9888; Local dev only.</span>
+  Reproduce this on a local dev checkout &mdash; <strong>never against the live site</strong>, which holds real distributor data. The two throwaway signups below live only in your local database.
+</div>
+
+    <details class="section" id="setup" open>
+      <summary>Setup</summary>
+      <div class="section-body">
+        <ol>
+  <li>Start the app: <button type="button" class="copy" data-copy="bin/dev">bin/dev</button> &rarr; <button type="button" class="copy" data-copy="http://localhost:3000">http://localhost:3000</button> (confirm it boots).</li>
+  <li><strong>No setup beyond the above.</strong> This PR touches only two onboarding views &mdash; no migrations, no new env vars, no new dependencies. If your dev DB is fresh, run <button type="button" class="copy" data-copy="bin/setup --skip-server">bin/setup --skip-server</button> first.</li>
+  <li><strong>Locale:</strong> the UI defaults to Ukrainian (<code>uk</code>). Key buttons: <em>&laquo;Продовжити&raquo;</em> = Continue, <em>&laquo;Завершити реєстрацію&raquo;</em> = Complete registration, <em>&laquo;Назад&raquo;</em> = Back.</li>
+  <li><strong>Mobile-first (optional):</strong> repeat Part 2 at a 375px viewport (DevTools device toolbar) &mdash; every onboarding screen must work at that width.</li>
+</ol>
+
+        <h3>Logins</h3>
+        <p>Auth is <strong>magic-link only</strong> (no passwords). In development, outgoing mail is caught by <strong>letter_opener</strong>, which auto-opens each email in a new browser tab &mdash; click the magic link inside to sign in.</p>
+<p>The seeded distributor accounts are all <em>already onboarded</em>, so they can&rsquo;t show the onboarding flow. This walkthrough creates <strong>two fresh accounts</strong> via the signup page (one per Part), using throwaway reserved-example emails:</p>
+<table>
+  <thead><tr><th>Used in</th><th>Sign-up email</th><th>Why</th></tr></thead>
+  <tbody>
+    <tr><td>Part 1 <span class="role-pill">new signup</span></td><td><button type="button" class="copy" data-copy="walkthrough-763a@example.com">walkthrough-763a@example.com</button></td><td>JS-on regression pass</td></tr>
+    <tr><td>Part 2 <span class="role-pill">new signup</span></td><td><button type="button" class="copy" data-copy="walkthrough-763b@example.com">walkthrough-763b@example.com</button></td><td>JS-disabled &mdash; the fix</td></tr>
+  </tbody>
+</table>
+<p><strong>How to sign up:</strong> open <button type="button" class="copy" data-copy="http://localhost:3000/signup">http://localhost:3000/signup</button>, enter any first/last name + the email above, submit (<em>&laquo;Зареєструватися&raquo;</em>). A magic-link email opens in a new tab &mdash; click the link to land in onboarding.</p>
+
+      </div>
+    </details>
+
+    <details class="section" id="walkthrough" open>
+      <summary>Walkthrough</summary>
+      <div class="section-body">
+        <div class="story">
+  <div class="story-head">Part 1 &mdash; The checkbox gate still works with JavaScript on <span class="role-pill">pre-existing &mdash; regression check</span></div>
+  <div class="story-body">
+    <p>Confirms the fix didn&rsquo;t weaken the normal experience: with JS present, the buttons stay disabled until every box is ticked.</p>
+    <ol>
+      <li>Sign up with <button type="button" class="copy" data-copy="walkthrough-763a@example.com">walkthrough-763a@example.com</button>, then click the magic link that opens.<br><span class="expect">&#9989; You land on onboarding <em>Step 1 of 6 &mdash; Your information</em>.</span></li>
+      <li>Fill first/last name + phone, click <em>&laquo;Продовжити&raquo;</em>. On <em>Step 2</em> fill the organization fields + a delivery method, click <em>&laquo;Продовжити&raquo;</em>.<br><span class="expect">&#9989; You reach <em>Step 3 of 6 &mdash; Distributor commitments</em>.</span></li>
+      <li>Look at the <em>&laquo;Продовжити&raquo;</em> button <strong>before</strong> ticking anything.<br><span class="expect">&#9989; It is greyed out / not clickable (disabled by the Stimulus controller).</span></li>
+      <li>Tick all three commitment checkboxes.<br><span class="expect">&#9989; The button turns blue / clickable the instant the last box is ticked.</span></li>
+      <li>Continue through <em>Step 4</em> and <em>Step 5</em> the same way; on <em>Step 6 &mdash; Final acknowledgment</em> tick the single box.<br><span class="expect">&#9989; The <em>&laquo;Завершити реєстрацію&raquo;</em> button is disabled until the box is ticked, then enables.</span></li>
+      <li>Click <em>&laquo;Завершити реєстрацію&raquo;</em>.<br><span class="expect">&#9989; You land on the home page with a success message &mdash; onboarding complete.</span></li>
+    </ol>
+  </div>
+</div>
+
+<div class="story">
+  <div class="story-head">Part 2 &mdash; Onboarding completes with JavaScript disabled <span class="role-pill">new in this PR</span></div>
+  <div class="story-body">
+    <p><strong>This is the fix &mdash; in two halves.</strong> (1) The button is no longer permanently dead when JS fails, so a user like Oleksandr isn&rsquo;t trapped. (2) The server now <em>enforces</em> consent, so a no-JS user still can&rsquo;t skip the boxes &mdash; an empty submit bounces back with an error instead of sailing through. You&rsquo;ll exercise both.</p>
+    <ol>
+      <li>Open DevTools (<button type="button" class="copy" data-copy="Cmd+Opt+I">Cmd+Opt+I</button>), open the Command Menu (<button type="button" class="copy" data-copy="Cmd+Shift+P">Cmd+Shift+P</button>), type <em>Disable JavaScript</em>, press Enter. <strong>Leave DevTools open</strong> so JS stays disabled.<br><span class="expect">&#9989; A warning badge appears; JavaScript no longer runs on the page.</span></li>
+      <li>Sign up with <button type="button" class="copy" data-copy="walkthrough-763b@example.com">walkthrough-763b@example.com</button>, then click the magic link that opens.<br><span class="expect">&#9989; You land on onboarding Step 1 (magic-link sign-in works without JS).</span></li>
+      <li>Complete <em>Step 1</em> (Profile) and <em>Step 2</em> (Organization) &mdash; plain forms, never JS-gated.<br><span class="expect">&#9989; You reach <em>Step 3 &mdash; Distributor commitments</em>.</span></li>
+      <li><strong>Half 1 &mdash; not trapped:</strong> look at the <em>&laquo;Продовжити&raquo;</em> button <em>before</em> ticking anything.<br><span class="expect">&#9989; It is fully blue and clickable &mdash; NOT greyed out. (Before this PR it was permanently disabled here, trapping the user.)</span></li>
+      <li><strong>Half 2 &mdash; can&rsquo;t skip consent:</strong> with <em>no boxes ticked</em> (or only some), click <em>&laquo;Продовжити&raquo;</em>.<br><span class="expect">&#9989; The page reloads on <em>Step 3</em> with a red error banner (&laquo;Будь ласка, підтвердіть кожне зобов&rsquo;язання, щоб продовжити.&raquo; / &ldquo;Please acknowledge every commitment to continue.&rdquo;). You do <strong>not</strong> advance. Any box you <em>had</em> ticked stays ticked.</span></li>
+      <li>Now tick <em>all</em> the boxes and click <em>&laquo;Продовжити&raquo;</em>.<br><span class="expect">&#9989; You advance to Step 4. Repeat through Step 5 (each step bounces an empty submit, advances a complete one).</span></li>
+      <li>On <em>Step 6 &mdash; Final acknowledgment</em>, first click <em>&laquo;Завершити реєстрацію&raquo;</em> with the box <em>unticked</em>.<br><span class="expect">&#9989; It bounces back with an error and onboarding is <strong>not</strong> completed.</span></li>
+      <li>Tick the acknowledgment box and click <em>&laquo;Завершити реєстрацію&raquo;</em>.<br><span class="expect">&#9989; You land on the home page with the success message &mdash; onboarding completed end-to-end with JS disabled, consent intact.</span></li>
+      <li>Re-enable JS: Command Menu (<button type="button" class="copy" data-copy="Cmd+Shift+P">Cmd+Shift+P</button>) &rarr; <em>Enable JavaScript</em>.</li>
+    </ol>
+  </div>
+</div>
+
+      </div>
+    </details>
+
+    <details class="section" id="not-browser-testable">
+      <summary>Not browser-testable</summary>
+      <div class="section-body">
+        <ul>
+  <li><strong>The brief enable&rarr;disable flash (JS on).</strong> With JS present the button renders momentarily enabled before the Stimulus controller disables it on <code>connect()</code>. Too fast to observe reliably; cosmetic only.</li>
+  <li><strong>Consent timestamp.</strong> Completing acknowledgment stamps <code>terms_accepted_at</code> / <code>terms_version</code> on the distributor &mdash; confirmed by tests and the <code>/verify</code> run, not visible in the UI. (The new server check means this is stamped only when the box was actually ticked.)</li>
+  <li><strong>The exact rejection logic</strong> (which keys are required per step, the 422 status) is covered by integration tests; the browser shows the user-facing half &mdash; the error banner and staying put.</li>
+</ul>
+
+      </div>
+    </details>
+
+    <details class="section" id="cleanup">
+      <summary>Cleanup</summary>
+      <div class="section-body">
+        <ul>
+  <li>The two accounts you created (<code>walkthrough-763a@example.com</code>, <code>walkthrough-763b@example.com</code>) are real rows in your local dev DB. Remove them via the Rails console, or reset everything with <button type="button" class="copy" data-copy="bin/rails db:reset &amp;&amp; bin/rails db:seed">bin/rails db:reset &amp;&amp; bin/rails db:seed</button>.</li>
+  <li>Make sure JavaScript is re-enabled in DevTools.</li>
+  <li>This HTML file is gitignored scratch under <code>tmp/</code> &mdash; delete it when you&rsquo;re done.</li>
+</ul>
+
+      </div>
+    </details>
+
+    <footer class="doc">
+      Generated by the <code>/walkthrough</code> skill · 2026-06-24
+    </footer>
+  </main>
+</div>
+<script>
+  // Click-to-copy. Any [data-copy] element copies its data-copy value
+  // (falling back to its text). Modern Clipboard API with a legacy
+  // execCommand fallback so it works on file:// and older browsers.
+  (function () {
+    function flash(el) {
+      el.classList.add("copied");
+      clearTimeout(el._copyTimer);
+      el._copyTimer = setTimeout(function () { el.classList.remove("copied"); }, 1200);
+    }
+    function legacyCopy(text, el) {
+      var ta = document.createElement("textarea");
+      ta.value = text;
+      ta.setAttribute("readonly", "");
+      ta.style.position = "absolute";
+      ta.style.left = "-9999px";
+      document.body.appendChild(ta);
+      ta.select();
+      try { document.execCommand("copy"); flash(el); } catch (e) {}
+      document.body.removeChild(ta);
+    }
+    document.addEventListener("click", function (e) {
+      var el = e.target.closest("[data-copy]");
+      if (!el) return;
+      var text = el.getAttribute("data-copy") || el.textContent.trim();
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(function () { flash(el); },
+          function () { legacyCopy(text, el); });
+      } else {
+        legacyCopy(text, el);
+      }
+    });
+  })();
+</script>
+</body>
+</html>
